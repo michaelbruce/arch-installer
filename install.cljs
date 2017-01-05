@@ -28,17 +28,34 @@
 ;; TODO complete swapfile enabling - how do you use genfstab to assign swapfile instead of /mnt/swapfile - is this even an issue? it seems so!
 ;; (call "fallocate" ["-l" "1024M" "/mnt/swapfile"])
 ;; (call "chmod" ["600" "/mnt/swapfile"])
-(call "arch-chroot" ["/mnt" "pacman" "-S" "gvim" "net-tools" "--noconfirm"])
+
+(defn chroot [mount-point & cmds]
+  "Take a list of commands and executes them under a chroot jail at mount-point"
+  (map (fn [cmd] (call "arch-chroot" ["/mnt" "/bin/bash" "-c" cmd])) cmds))
+
 (call "arch-chroot" ["/mnt" "sed" "-i" "/^#en_US.UTF-8 /s/^#//" "/etc/locale.gen"])
 (call "arch-chroot" ["/mnt" "sed" "-i" "/^#en_GB.UTF-8 /s/^#//" "/etc/locale.gen"])
-(call "arch-chroot" ["/mnt" "locale-gen"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "echo 'LANG=en_GB.UTF-8' > /etc/locale.conf"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "ln -s /usr/share/zoneinfo/Europe/London /etc/localtime"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "hwclock --systohc --utc"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "mkinitcpio -p linux"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "pacman -S grub os-prober --noconfirm"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "grub-install --recheck /dev/sda"])
-(call "arch-chroot" ["/mnt" "/bin/bash" "-c" "grub-mkconfig -o /boot/grub/grub.cfg"])
 
+(chroot
+  "/mnt"
+  "pacman -S gvim net-tools --noconfirm"
+  "locale-gen"
+  "echo 'LANG=en_GB.UTF-8' > /etc/locale.conf"
+  "ln -s /usr/share/zoneinfo/Europe/London /etc/localtime"
+  "hwclock --systohc --utc"
+  "mkinitcpio -p linux"
+  "pacman -S grub os-prober --noconfirm"
+  "grub-install --recheck /dev/sda"
+  "grub-mkconfig -o /boot/grub/grub.cfg")
 
+;; UNTESTED beyond here - needs loading against virtualbox
+;; TODO script hosting these files (maybe tar.gz'd?) for virtualbox to wget locally
 
+;; TODO set /etc/hostname to mikepjb-laptop etc
+;; TODO set /etc/hosts change localhost to new name
+;; TODO systemctl enable dhcpcd@<interface>.service
+
+;; XXX at this point can we umount partitions, reboot and set a script to resume on restart?
+;; TODO how much of the following can be done in chroot before the restart... all of it?
+
+;; Reached line 62 of notes
